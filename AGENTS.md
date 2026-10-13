@@ -88,7 +88,7 @@ tests/
 
 * **`*.schemas.ts`**: Reserved strictly for Zod request payload validation schemas inside module folders.
 * **Global Zod Schemas:** Reusable, non-entity Zod schemas belong in `src/shared/schemas/`.
-* **Database Models:** Database storage layer structures/entities (MongoDB) belong in `src/models/` and must use the `.model.ts` suffix (e.g., `user.model.ts`).
+* **Database Models:** Database storage layer structures/entities (PostgreSQL / Drizzle ORM) belong in `src/models/` and must use the `.model.ts` suffix (e.g., `user.model.ts`).
 
 ---
 
