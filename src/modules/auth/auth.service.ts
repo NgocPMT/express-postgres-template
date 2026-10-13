@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 import { env } from '../../config/env.js';
-import type { UserDoc } from '../../models/user.model.js';
+import type { User } from '../../models/user.model.js';
 import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { createHttpError } from '../../shared/errors/http-error.js';
 import { usersService, type UsersService } from '../users/users.service.js';
@@ -31,9 +31,9 @@ export class AuthService {
     private readonly userService: UsersService = usersService,
   ) {}
 
-  private generateTokens(user: { _id: unknown; email: string; role: string }): AuthTokens {
+  private generateTokens(user: { id: string; email: string; role: string }): AuthTokens {
     const payload: TokenPayload = {
-      sub: String(user._id),
+      sub: user.id,
       email: user.email,
       role: user.role,
     };
@@ -49,7 +49,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private mapUserDto(user: UserDoc): UserDTO {
+  private mapUserDto(user: User): UserDTO {
     return this.userService.mapUserDto(user);
   }
 
@@ -69,12 +69,12 @@ export class AuthService {
       username: input.username,
     });
 
-    const password_hash = await bcrypt.hash(input.password, AUTH_CONFIG.BCRYPT_SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(input.password, AUTH_CONFIG.BCRYPT_SALT_ROUNDS);
 
     await this.repository.createAccount({
-      userId: user._id,
+      userId: user.id,
       provider: 'local',
-      password_hash,
+      passwordHash,
     });
 
     const tokens = this.generateTokens(user);
@@ -90,12 +90,12 @@ export class AuthService {
       throw createHttpError(HTTP_STATUS.HTTP_401_UNAUTHORIZED, AUTH_MESSAGES.INVALID_CREDENTIALS);
     }
 
-    const account = await this.repository.findLocalAccountByUserId(user._id);
-    if (!account?.password_hash) {
+    const account = await this.repository.findLocalAccountByUserId(user.id);
+    if (!account?.passwordHash) {
       throw createHttpError(HTTP_STATUS.HTTP_401_UNAUTHORIZED, AUTH_MESSAGES.INVALID_CREDENTIALS);
     }
 
-    const isMatch = await bcrypt.compare(input.password, account.password_hash);
+    const isMatch = await bcrypt.compare(input.password, account.passwordHash);
     if (!isMatch) {
       throw createHttpError(HTTP_STATUS.HTTP_401_UNAUTHORIZED, AUTH_MESSAGES.INVALID_CREDENTIALS);
     }

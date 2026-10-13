@@ -26,7 +26,7 @@ describe('AuthService', () => {
       findById: vi.fn(),
       getUserById: vi.fn(),
       mapUserDto: vi.fn((user) => ({
-        id: String(user._id),
+        id: user.id,
         email: user.email,
         username: user.username,
         role: user.role,
@@ -44,7 +44,7 @@ describe('AuthService', () => {
       mockUserService.existsByEmail = vi.fn().mockResolvedValue(false);
       mockUserService.existsByUsername = vi.fn().mockResolvedValue(false);
       mockUserService.createUser = vi.fn().mockResolvedValue({
-        _id: 'user-id-1',
+        id: 'user-id-1',
         email: 'test@example.com',
         username: 'testuser',
         role: 'user',
@@ -62,7 +62,11 @@ describe('AuthService', () => {
         email: 'test@example.com',
         username: 'testuser',
       });
-      expect(mockAuthRepo.createAccount).toHaveBeenCalled();
+      expect(mockAuthRepo.createAccount).toHaveBeenCalledWith({
+        userId: 'user-id-1',
+        provider: 'local',
+        passwordHash: expect.any(String),
+      });
       expect(result.user.email).toBe('test@example.com');
       expect(result.user.username).toBe('testuser');
       expect(result.tokens.accessToken).toBeDefined();
@@ -99,17 +103,17 @@ describe('AuthService', () => {
     it('authenticates user with email identifier and returns tokens', async () => {
       const passwordHash = await bcrypt.hash('password123', 10);
       mockUserService.findByIdentifier = vi.fn().mockResolvedValue({
-        _id: 'user-id-1',
+        id: 'user-id-1',
         email: 'test@example.com',
         username: 'testuser',
         role: 'user',
         status: 'active',
       } as never);
       mockAuthRepo.findLocalAccountByUserId = vi.fn().mockResolvedValue({
-        _id: 'account-id-1',
-        user_id: 'user-id-1',
+        id: 'account-id-1',
+        userId: 'user-id-1',
         provider: 'local',
-        password_hash: passwordHash,
+        passwordHash,
       } as never);
 
       const result = await authService.login({
@@ -125,17 +129,17 @@ describe('AuthService', () => {
     it('authenticates user with username identifier and returns tokens', async () => {
       const passwordHash = await bcrypt.hash('password123', 10);
       mockUserService.findByIdentifier = vi.fn().mockResolvedValue({
-        _id: 'user-id-1',
+        id: 'user-id-1',
         email: 'test@example.com',
         username: 'testuser',
         role: 'user',
         status: 'active',
       } as never);
       mockAuthRepo.findLocalAccountByUserId = vi.fn().mockResolvedValue({
-        _id: 'account-id-1',
-        user_id: 'user-id-1',
+        id: 'account-id-1',
+        userId: 'user-id-1',
         provider: 'local',
-        password_hash: passwordHash,
+        passwordHash,
       } as never);
 
       const result = await authService.login({
@@ -150,17 +154,17 @@ describe('AuthService', () => {
     it('throws 401 when password does not match', async () => {
       const passwordHash = await bcrypt.hash('different-password', 10);
       mockUserService.findByIdentifier = vi.fn().mockResolvedValue({
-        _id: 'user-id-1',
+        id: 'user-id-1',
         email: 'test@example.com',
         username: 'testuser',
         role: 'user',
         status: 'active',
       } as never);
       mockAuthRepo.findLocalAccountByUserId = vi.fn().mockResolvedValue({
-        _id: 'account-id-1',
-        user_id: 'user-id-1',
+        id: 'account-id-1',
+        userId: 'user-id-1',
         provider: 'local',
-        password_hash: passwordHash,
+        passwordHash,
       } as never);
 
       await expect(
@@ -184,7 +188,7 @@ describe('AuthService', () => {
 
     it('throws 401 when local account not found for user', async () => {
       mockUserService.findByIdentifier = vi.fn().mockResolvedValue({
-        _id: 'user-id-1',
+        id: 'user-id-1',
         email: 'oauth@example.com',
         username: 'oauthuser',
         status: 'active',
@@ -208,7 +212,7 @@ describe('AuthService', () => {
       );
 
       mockUserService.findById = vi.fn().mockResolvedValue({
-        _id: 'user-id-1',
+        id: 'user-id-1',
         email: 'test@example.com',
         username: 'testuser',
         role: 'user',

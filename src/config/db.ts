@@ -1,13 +1,22 @@
-import mongoose from 'mongoose';
-
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { env } from './env.js';
-import '../models/index.js';
+import * as schema from '../models/index.js';
 
-export async function connectDatabase(): Promise<typeof mongoose> {
-  await mongoose.connect(env.MONGODB_URI);
-  return mongoose;
+const { Pool } = pg;
+
+export const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+});
+
+export const db = drizzle(pool, { schema });
+
+export async function connectDatabase(): Promise<typeof db> {
+  const client = await pool.connect();
+  client.release();
+  return db;
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  await mongoose.disconnect();
+  await pool.end();
 }
