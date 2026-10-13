@@ -1,48 +1,33 @@
-import type { Types } from 'mongoose';
-import { Schema, model } from 'mongoose';
+import { pgTable, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import { v7 as uuidv7 } from 'uuid';
+import { users } from './user.model.js';
 
 export const authProviders = ['local', 'google'] as const;
 export type AuthProvider = (typeof authProviders)[number];
 
-export interface AccountData {
-  user_id: Types.ObjectId;
-  provider: AuthProvider;
-  provider_account_id?: string;
-  password_hash?: string;
-}
-
-const accountSchema = new Schema<AccountData>(
+export const accounts = pgTable(
+  'accounts',
   {
-    user_id: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
-    },
-    provider: {
-      type: String,
-      enum: authProviders,
-      required: true,
-    },
-    provider_account_id: {
-      type: String,
-      trim: true,
-    },
-    password_hash: {
-      type: String,
-      select: false,
-    },
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: varchar('provider', { length: 50 }).$type<AuthProvider>().notNull(),
+    providerAccountId: varchar('provider_account_id', { length: 255 }),
+    passwordHash: varchar('password_hash', { length: 255 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
-  {
-    timestamps: true,
-    collection: 'accounts',
-  },
+  (table) => [
+    uniqueIndex('accounts_provider_provider_account_id_idx').on(table.provider, table.providerAccountId),
+    uniqueIndex('accounts_user_id_provider_idx').on(table.userId, table.provider),
+  ],
 );
 
-accountSchema.index({ provider: 1, provider_account_id: 1 }, { unique: true, sparse: true });
-accountSchema.index({ user_id: 1, provider: 1 }, { unique: true });
-
-export const Account = model('Account', accountSchema);
-export type AccountDoc = ReturnType<typeof Account.prototype.toObject> & {
-  _id: Types.ObjectId;
-};
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;

@@ -1,22 +1,30 @@
 import type { ErrorRequestHandler } from 'express';
-import mongoose from 'mongoose';
 import { ZodError } from 'zod';
 import { HTTP_STATUS } from '../shared/constants/http-status.js';
+
+const POSTGRES_ERROR = {
+  UNIQUE_VIOLATION: '23505',
+  FOREIGN_KEY_VIOLATION: '23503',
+  INVALID_TEXT_REPRESENTATION: '22P02',
+} as const;
 
 function getStatusCode(error: unknown): number {
   if (error instanceof ZodError) {
     return HTTP_STATUS.HTTP_400_BAD_REQUEST;
   }
 
-  if (error instanceof mongoose.Error.ValidationError) {
-    return HTTP_STATUS.HTTP_400_BAD_REQUEST;
-  }
-
-  if (error instanceof mongoose.Error.CastError) {
-    return HTTP_STATUS.HTTP_400_BAD_REQUEST;
-  }
-
   if (typeof error === 'object' && error !== null) {
+    const maybeCode = 'code' in error ? (error as { code?: unknown }).code : undefined;
+    if (maybeCode === POSTGRES_ERROR.UNIQUE_VIOLATION) {
+      return HTTP_STATUS.HTTP_409_CONFLICT;
+    }
+    if (
+      maybeCode === POSTGRES_ERROR.FOREIGN_KEY_VIOLATION ||
+      maybeCode === POSTGRES_ERROR.INVALID_TEXT_REPRESENTATION
+    ) {
+      return HTTP_STATUS.HTTP_400_BAD_REQUEST;
+    }
+
     const maybeStatus = 'statusCode' in error ? (error as { statusCode?: unknown }).statusCode : undefined;
     if (typeof maybeStatus === 'number' && maybeStatus >= HTTP_STATUS.HTTP_400_BAD_REQUEST) {
       return maybeStatus;
@@ -34,6 +42,20 @@ function getStatusCode(error: unknown): number {
 function getMessage(error: unknown): string {
   if (error instanceof ZodError) {
     return error.issues[0]?.message ?? 'Request validation failed';
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeCode = 'code' in error ? (error as { code?: unknown }).code : undefined;
+    if (maybeCode === POSTGRES_ERROR.UNIQUE_VIOLATION) {
+      const maybeDetail = 'detail' in error ? (error as { detail?: unknown }).detail : undefined;
+      return typeof maybeDetail === 'string' ? maybeDetail : 'Unique constraint violation';
+    }
+    if (maybeCode === POSTGRES_ERROR.FOREIGN_KEY_VIOLATION) {
+      return 'Foreign key constraint violation';
+    }
+    if (maybeCode === POSTGRES_ERROR.INVALID_TEXT_REPRESENTATION) {
+      return 'Invalid input syntax';
+    }
   }
 
   if (error instanceof Error) {
@@ -63,25 +85,6 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       success: false,
       message,
       issues: error.issues,
-    });
-    return;
-  }
-
-  if (error instanceof mongoose.Error.ValidationError) {
-    res.status(statusCode).json({
-      success: false,
-      message,
-      issues: Object.values(error.errors).map((item) => item.message),
-    });
-    return;
-  }
-
-  if (error instanceof mongoose.Error.CastError) {
-    res.status(statusCode).json({
-      success: false,
-      message,
-      path: error.path,
-      value: error.value,
     });
     return;
   }

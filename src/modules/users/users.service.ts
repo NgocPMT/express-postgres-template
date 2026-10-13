@@ -1,4 +1,4 @@
-import type { UserDoc } from '../../models/user.model.js';
+import type { User } from '../../models/user.model.js';
 import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { createHttpError } from '../../shared/errors/http-error.js';
 import { usersRepository, type UsersRepository, type CreateUserData } from './users.repository.js';
@@ -7,16 +7,15 @@ import type { UserDTO } from './users.schemas.js';
 export class UsersService {
   constructor(private readonly repository: UsersRepository = usersRepository) {}
 
-  mapUserDto(user: UserDoc): UserDTO {
-    const raw = user.toObject();
+  mapUserDto(user: User): UserDTO {
     return {
-      id: String(user._id),
+      id: user.id,
       email: user.email,
       username: user.username,
       role: user.role,
       status: user.status,
-      createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : undefined,
-      updatedAt: raw.updatedAt ? new Date(raw.updatedAt).toISOString() : undefined,
+      createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
+      updatedAt: user.updatedAt ? new Date(user.updatedAt).toISOString() : undefined,
     };
   }
 
@@ -28,11 +27,11 @@ export class UsersService {
     return this.mapUserDto(user);
   }
 
-  async findByIdentifier(identifier: string): Promise<UserDoc | null> {
+  async findByIdentifier(identifier: string): Promise<User | null> {
     return this.repository.findByIdentifier(identifier);
   }
 
-  async findById(id: string): Promise<UserDoc | null> {
+  async findById(id: string): Promise<User | null> {
     return this.repository.findById(id);
   }
 
@@ -44,7 +43,7 @@ export class UsersService {
     return this.repository.existsByUsername(username);
   }
 
-  async createUser(data: CreateUserData): Promise<UserDoc> {
+  async createUser(data: CreateUserData): Promise<User> {
     return this.repository.createUser(data);
   }
 }

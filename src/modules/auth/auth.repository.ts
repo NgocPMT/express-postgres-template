@@ -1,44 +1,47 @@
-import type { Types } from 'mongoose';
-
-import { Account, type AccountDoc, type AuthProvider } from '../../models/account.model.js';
+import { and, eq } from 'drizzle-orm';
+import { db } from '../../config/db.js';
+import { accounts, type Account, type AuthProvider } from '../../models/account.model.js';
 
 export interface CreateAccountData {
-  userId: Types.ObjectId | string;
+  userId: string;
   provider: AuthProvider;
-  password_hash?: string;
-  provider_account_id?: string;
+  passwordHash?: string;
+  providerAccountId?: string;
 }
 
 export class AuthRepository {
-  async createAccount(data: CreateAccountData): Promise<AccountDoc> {
-    const account = new Account({
-      user_id: data.userId,
-      provider: data.provider,
-      ...(data.password_hash ? { password_hash: data.password_hash } : {}),
-      ...(data.provider_account_id ? { provider_account_id: data.provider_account_id } : {}),
-    });
-    return account.save();
+  async createAccount(data: CreateAccountData): Promise<Account> {
+    const [account] = await db
+      .insert(accounts)
+      .values({
+        userId: data.userId,
+        provider: data.provider,
+        passwordHash: data.passwordHash,
+        providerAccountId: data.providerAccountId,
+      })
+      .returning();
+
+    if (!account) {
+      throw new Error('Failed to create account');
+    }
+    return account;
   }
 
-  async findLocalAccountByUserId(
-    userId: Types.ObjectId | string,
-  ): Promise<(AccountDoc & { password_hash: string }) | null> {
-    return Account.findOne({
-      user_id: userId,
-      provider: 'local',
-    })
-      .select('+password_hash')
-      .exec() as Promise<(AccountDoc & { password_hash: string }) | null>;
+  async findLocalAccountByUserId(userId: string): Promise<Account | null> {
+    const result = await db.query.accounts.findFirst({
+      where: and(eq(accounts.userId, userId), eq(accounts.provider, 'local')),
+    });
+    return result ?? null;
   }
 
   async findAccountByProvider(
     provider: AuthProvider,
     providerAccountId: string,
-  ): Promise<AccountDoc | null> {
-    return Account.findOne({
-      provider,
-      provider_account_id: providerAccountId,
-    }).exec();
+  ): Promise<Account | null> {
+    const result = await db.query.accounts.findFirst({
+      where: and(eq(accounts.provider, provider), eq(accounts.providerAccountId, providerAccountId)),
+    });
+    return result ?? null;
   }
 }
 

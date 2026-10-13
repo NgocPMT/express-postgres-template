@@ -1,6 +1,6 @@
-# Express Template
+# Express PostgreSQL Template
 
-A clean, modular, and production-ready Express 5 + TypeScript template featuring MongoDB (Mongoose), Redis, stateless JWT authentication, OpenAPI/Swagger UI integration, Vitest, and strict adherence to a 6-layer vertical-slice architecture.
+A clean, modular, and production-ready Express 5 + TypeScript template featuring PostgreSQL (Drizzle ORM), Redis, time-ordered UUIDv7 identifiers, stateless JWT authentication, OpenAPI/Swagger UI integration, Vitest, and strict adherence to a 6-layer vertical-slice architecture.
 
 ---
 
@@ -8,7 +8,7 @@ A clean, modular, and production-ready Express 5 + TypeScript template featuring
 
 - **Runtime & Language**: Node.js (ESM), TypeScript (strict mode), [tsx](https://github.com/privatenumber/tsx)
 - **Web Framework**: Express 5
-- **Database & ODM**: MongoDB with [Mongoose](https://mongoosejs.com/) (configured with replica set for transactions)
+- **Database & ORM**: PostgreSQL 17 with [Drizzle ORM](https://orm.drizzle.team/) and UUIDv7 primary keys
 - **Cache & Rate Limiting**: Redis with `redis` and `express-rate-limit`
 - **Authentication**: Stateless JWT (`jsonwebtoken` + `bcryptjs`) with access & refresh tokens
 - **Validation & API Docs**: [Zod](https://zod.dev/), `@asteasolutions/zod-to-openapi`, and Swagger UI
@@ -50,22 +50,22 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-### 3. Start Database & Redis
+### 3. Start PostgreSQL & Redis
 
-Launch MongoDB and Redis via Docker Compose:
+Launch PostgreSQL and Redis via Docker Compose:
 
 ```bash
 docker compose up -d
 ```
 
-### 4. Initialize MongoDB Replica Set
+### 4. Push or Run Database Migrations
 
-MongoDB transactions require a replica set. The `mongodb-init` service in `docker compose up -d` automatically initializes `rs0` upon container startup.
-
-If you ever need to manually (re-)initialize the replica set:
+Apply the database schema to your PostgreSQL instance:
 
 ```bash
-docker exec -it express-template-mongodb mongosh --eval 'rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "localhost:27017" }] })'
+npm run db:push
+# or run generated migrations:
+npm run db:migrate
 ```
 
 ### 5. Run the Development Server
@@ -94,6 +94,10 @@ npm run dev
 | `npm test` | Runs unit tests with Vitest |
 | `npm run test:integration` | Runs integration tests |
 | `npm run test:all` | Runs all unit and integration tests |
+| `npm run db:generate` | Generates SQL migrations from schema |
+| `npm run db:migrate` | Runs pending SQL migrations |
+| `npm run db:push` | Pushes schema directly to the database |
+| `npm run db:studio` | Opens Drizzle Studio GUI for data browsing |
 | `npm run generate:client` | Generates TypeScript client from OpenAPI |
 
 ---
@@ -113,7 +117,7 @@ src/modules/posts/
 └── index.ts
 ```
 
-1. Define Mongoose model in `src/models/post.model.ts`.
+1. Define Drizzle model in `src/models/post.model.ts` and export it in `src/models/index.ts`.
 2. Implement repository, service, controller, and routes.
 3. Define request schemas in `posts.schemas.ts` and OpenAPI docs in `posts.openapi.ts`.
 4. Register the router in `src/modules/index.ts` and OpenAPI paths in `src/openapi/registry.ts`.
