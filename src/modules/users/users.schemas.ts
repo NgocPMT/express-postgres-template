@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const userIdParamSchema = z.object({
-  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid user ID format'),
+  id: z.string().uuid('Invalid user ID format'),
 });
 
 export type UserIdParam = z.infer<typeof userIdParamSchema>;

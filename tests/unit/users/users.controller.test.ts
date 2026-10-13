@@ -33,7 +33,7 @@ describe('UsersController', () => {
         status,
         locals: {
           validated: {
-            params: { id: '507f1f77bcf86cd799439011' },
+            params: { id: '018f6e72-23b0-7e28-9f20-b42e77b4a1a3' },
           },
         },
       } as never;
@@ -55,7 +55,7 @@ describe('UsersController', () => {
         status,
         locals: {
           validated: {
-            params: { id: '507f1f77bcf86cd799439011' },
+            params: { id: '018f6e72-23b0-7e28-9f20-b42e77b4a1a3' },
           },
         },
       } as never;
